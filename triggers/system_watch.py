@@ -53,6 +53,7 @@ def main() -> None:
     sp = ZundaSpeaker()
     prev_ac, _pct = power_state()
     low_warned = False
+    full_warned = False
     prev_apps = running_apps()
     last_app_poll = time.time()
 
@@ -61,6 +62,7 @@ def main() -> None:
             sp.cfg = type(sp.cfg)()  # 設定再読込
             poll = _i("POWER_POLL_SEC", 12)
             low_pct = _i("POWER_LOW_PCT", 20)
+            full_pct = _i("POWER_FULL_PCT", 100)   # 0 で満充電通知を無効
             app_watch = [w.strip().lower() for w in _s("APP_WATCH", "").split(",") if w.strip()]
             app_poll = _i("APP_POLL_SEC", 5)
 
@@ -77,6 +79,12 @@ def main() -> None:
                         low_warned = True
                     elif ac is True or pct > low_pct + 5:
                         low_warned = False
+                    # 満充電(充電中に閾値%以上で一度だけ)。抜く/閾値割れで再武装。
+                    if full_pct > 0 and ac is True and pct >= full_pct and not full_warned:
+                        sp.speak(phrases.pick(phrases.CHARGE_FULL), switch=SWITCH)
+                        full_warned = True
+                    elif ac is False or pct < full_pct - 3:
+                        full_warned = False
 
             # アプリ起動監視(APP_WATCH が空なら無効)
             if app_watch and (time.time() - last_app_poll) >= app_poll:

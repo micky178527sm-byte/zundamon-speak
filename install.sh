@@ -10,7 +10,7 @@ ROOT="$(cd -P "$(dirname "$0")" && pwd)"
 LA="$HOME/Library/LaunchAgents"
 SVC="$HOME/Library/Services"
 DOMAIN="gui/$(id -u)"
-KEEPALIVE_AGENTS=(engine time system notify)
+KEEPALIVE_AGENTS=(engine time system notify weather)
 
 echo "==> zundamon-speak install (root=$ROOT)"
 
@@ -35,8 +35,9 @@ case ":$PATH:" in *":$BIN:"*) ;; *) echo "   ※ $BIN は PATH 外。~/.zshrc �
 # 2) スイッチ(既定: 全部ON)
 touch "$ROOT/enabled"
 mkdir -p "$ROOT/switches"
-touch "$ROOT/switches/time" "$ROOT/switches/power" "$ROOT/switches/notify" "$ROOT/switches/startup"
-echo "   スイッチ: time, power, notify, startup (master ON)"
+touch "$ROOT/switches/time" "$ROOT/switches/power" "$ROOT/switches/notify" \
+      "$ROOT/switches/startup" "$ROOT/switches/weather"
+echo "   スイッチ: time, power, notify, startup, weather (master ON)"
 
 # 3) LaunchAgents 配置&再ロード(__ROOT__/__PYTHON__ を実値に置換)
 mkdir -p "$LA" "$ROOT/logs"
