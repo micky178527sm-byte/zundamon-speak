@@ -31,6 +31,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+# core.py と同じディレクトリの reading.py を確実に解決する(CLI/トリガー両経路で)。
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import reading  # noqa: E402
+
 warnings.filterwarnings("ignore")
 
 APP_DIR = Path(__file__).resolve().parent
@@ -55,7 +59,9 @@ def _load_env() -> None:
             continue
         key, _, val = line.partition("=")
         val = val.split("#", 1)[0].strip().strip('"').strip("'")
-        os.environ.setdefault(key.strip(), val)
+        # 上書き反映: 常駐デーモンは毎ループ Config() を作り直すため、これで
+        # config.env の変更が(再起動なしで)次回発話に反映される(ホットリロード)。
+        os.environ[key.strip()] = val
 
 
 def _s(k: str, d: str) -> str:
@@ -96,6 +102,9 @@ class Config:
         self.lock_timeout = _f("SPEAK_LOCK_TIMEOUT", 8.0)
         self.dedupe_sec = _f("DEDUPE_SEC", 4.0)
         self.maxlen = _i("SPEAK_MAXLEN", 140)            # 長文の安全打ち切り
+        # 読み正規化: ローマ字の日本語名を綴り読みでなく かな読みにする
+        self.romaji = _b("ROMAJI_TO_KANA", True)
+        self.reading_map = reading.parse_reading_map(_s("READING_MAP", ""))
 
 
 # ==========================================================================
@@ -214,6 +223,8 @@ class ZundaSpeaker:
         text = (text or "").strip()
         if not text:
             return False
+        # ローマ字の名前など綴り読みになりがちな語を かな読みへ正規化(発話の直前)。
+        text = reading.normalize(text, self.cfg.reading_map, self.cfg.romaji)
         if len(text) > self.cfg.maxlen:
             text = text[: self.cfg.maxlen] + "、以下略なのだ"
 
