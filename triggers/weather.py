@@ -110,7 +110,8 @@ def build_text(data: dict):
         hi = int(today.get("maxtempC", temp))
         lo = int(today.get("mintempC", temp))
         hum = int(cur.get("humidity", 0))
-        spd = int(cur.get("windspeedKmph", 0))
+        spd = int(cur.get("windspeedKmph", 0))           # wttr.in は km/h
+        spd_ms = round(spd / 3.6)                         # 秒速(m/s)へ換算
         wdir = WIND_DIR.get(str(cur.get("winddir16Point", "")), "")
     except Exception:
         return None
@@ -120,9 +121,9 @@ def build_text(data: dict):
     parts.append(f"気温は今{temp}度、最高{hi}度、最低{lo}度")
     parts.append(f"湿度は{hum}パーセント")
     if wdir:
-        parts.append(f"風は{wdir}の時速{spd}キロ")
+        parts.append(f"風は{wdir}、風速{spd_ms}メートル")
     else:
-        parts.append(f"風は時速{spd}キロ")
+        parts.append(f"風速{spd_ms}メートル")
     text = "。".join(parts) + "なのだ。" + one_liner(code, temp, spd, hum)
     return text
 
