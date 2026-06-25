@@ -1,0 +1,17 @@
+# 生成物・ローカル状態(コミットしない)
+.voice_cache/
+logs/
+.state/
+ボタン/
+_setup/
+
+# マスタースイッチ / 個別スイッチ(ローカル状態)
+/enabled
+/switches/
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store

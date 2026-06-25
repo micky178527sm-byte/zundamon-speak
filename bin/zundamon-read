@@ -1,0 +1,20 @@
+#!/bin/sh
+# zundamon-read — 選択テキスト(標準入力) か クリップボード をずんだもんが読み上げる。
+#   - クイックアクション(Service)から呼ばれると、選択テキストが標準入力で渡る。
+#   - 単体起動なら クリップボード(pbpaste) を読む。
+# ホットキー割り当て用。ユーザーが明示的に押すので --force(静音/スイッチ無視)で喋る。
+SOURCE="$0"
+while [ -h "$SOURCE" ]; do
+  D="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in /*) ;; *) SOURCE="$D/$SOURCE" ;; esac
+done
+ROOT="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+
+if [ -t 0 ]; then
+  TEXT="$(pbpaste)"
+else
+  TEXT="$(cat)"
+  [ -z "$TEXT" ] && TEXT="$(pbpaste)"
+fi
+printf '%s' "$TEXT" | /usr/bin/env python3 "$ROOT/core.py" --force

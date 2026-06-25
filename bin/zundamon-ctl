@@ -1,0 +1,51 @@
+#!/bin/sh
+# zundamon-ctl — ずんだもんの操作(ボタンやコマンドから呼ぶ)
+#   zundamon-ctl start        全体オン(喋るようになる)
+#   zundamon-ctl stop         全体オフ(黙る。start で戻る)
+#   zundamon-ctl notify-on    通知の読み上げオン
+#   zundamon-ctl notify-off   通知の読み上げオフ
+#   zundamon-ctl test         ちゃんと動くか一言喋る
+#   zundamon-ctl status       状態表示
+#   zundamon-ctl uninstall    常駐を解除(アンインストール)
+SOURCE="$0"
+while [ -h "$SOURCE" ]; do
+  D="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in /*) ;; *) SOURCE="$D/$SOURCE" ;; esac
+done
+ROOT="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+LA="$HOME/Library/LaunchAgents"
+DOMAIN="gui/$(id -u)"
+
+case "$1" in
+  start|on)
+    touch "$ROOT/enabled"
+    mkdir -p "$ROOT/switches"
+    # 停止中のエージェントがあれば入れ直す(動作中なら何もしない)
+    for a in engine time system notify startup; do
+      launchctl print "$DOMAIN/com.zundamon.$a" >/dev/null 2>&1 \
+        || launchctl bootstrap "$DOMAIN" "$LA/com.zundamon.$a.plist" 2>/dev/null || true
+    done
+    echo "ずんだもんを開始したのだ" ;;
+  stop|off)
+    rm -f "$ROOT/enabled"
+    echo "ずんだもんを黙らせたのだ（「開始」でまた喋るのだ）" ;;
+  notify-on)
+    mkdir -p "$ROOT/switches"; touch "$ROOT/switches/notify"
+    echo "通知の読み上げをオンにしたのだ" ;;
+  notify-off)
+    rm -f "$ROOT/switches/notify"
+    echo "通知の読み上げをオフにしたのだ" ;;
+  test)
+    /usr/bin/env python3 "$ROOT/core.py" --test ;;
+  status)
+    /usr/bin/env python3 "$ROOT/core.py" --status
+    [ -f "$ROOT/enabled" ] && echo "全体: オン" || echo "全体: オフ"
+    for s in time power notify startup; do
+      [ -f "$ROOT/switches/$s" ] && echo "  $s: オン" || echo "  $s: オフ"
+    done ;;
+  uninstall)
+    "$ROOT/uninstall.sh" ;;
+  *)
+    echo "使い方: zundamon-ctl {start|stop|notify-on|notify-off|test|status|uninstall}" ;;
+esac

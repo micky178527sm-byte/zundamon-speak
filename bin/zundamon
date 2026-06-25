@@ -1,0 +1,16 @@
+#!/bin/sh
+# zundamon — どこからでもずんだもんに喋らせる CLI
+#   zundamon "こんにちはなのだ"
+#   echo "標準入力からも喋れるのだ" | zundamon
+#   zundamon --test           # 疎通確認して一言
+#   zundamon --status         # エンジン状態/設定を表示
+#   zundamon --force "必ず喋る"  # スイッチ/静音を無視
+# シンボリックリンク経由でも実体を解決する。
+SOURCE="$0"
+while [ -h "$SOURCE" ]; do
+  D="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in /*) ;; *) SOURCE="$D/$SOURCE" ;; esac
+done
+ROOT="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+exec /usr/bin/env python3 "$ROOT/core.py" "$@"
