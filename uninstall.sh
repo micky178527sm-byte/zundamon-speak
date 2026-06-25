@@ -4,7 +4,7 @@
 ROOT="$(cd -P "$(dirname "$0")" && pwd)"
 LA="$HOME/Library/LaunchAgents"
 DOMAIN="gui/$(id -u)"
-AGENTS=(engine time system notify startup weather)
+AGENTS=(engine time system notify startup weather eew quake jmawarn)
 
 echo "==> zundamon-speak uninstall"
 for a in $AGENTS; do

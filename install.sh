@@ -10,7 +10,7 @@ ROOT="$(cd -P "$(dirname "$0")" && pwd)"
 LA="$HOME/Library/LaunchAgents"
 SVC="$HOME/Library/Services"
 DOMAIN="gui/$(id -u)"
-KEEPALIVE_AGENTS=(engine time system notify weather)
+KEEPALIVE_AGENTS=(engine time system notify weather eew quake jmawarn)
 
 echo "==> zundamon-speak install (root=$ROOT)"
 
@@ -38,6 +38,8 @@ mkdir -p "$ROOT/switches"
 touch "$ROOT/switches/time" "$ROOT/switches/power" "$ROOT/switches/notify" \
       "$ROOT/switches/startup" "$ROOT/switches/weather"
 echo "   スイッチ: time, power, notify, startup, weather (master ON)"
+# 日本向け防災(eew/quake/jmawarn)は既定OFF。日本在住者が手動で有効化する。
+echo "   防災(日本向け)は既定OFF。有効化: touch $ROOT/switches/{eew,quake,jmawarn}"
 
 # 3) LaunchAgents 配置&再ロード(__ROOT__/__PYTHON__ を実値に置換)
 mkdir -p "$LA" "$ROOT/logs"
