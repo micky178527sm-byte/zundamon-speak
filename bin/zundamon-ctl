@@ -4,6 +4,11 @@
 #   zundamon-ctl stop         全体オフ(黙る。start で戻る)
 #   zundamon-ctl notify-on    通知の読み上げオン
 #   zundamon-ctl notify-off   通知の読み上げオフ
+#   zundamon-ctl quake-on     地震速報(緊急地震速報+地震情報)オン ※日本向け
+#   zundamon-ctl quake-off    地震速報オフ
+#   zundamon-ctl warn-on 名   気象警報オン+地域設定(例: warn-on 東京都) ※日本向け
+#   zundamon-ctl warn-off     気象警報オフ
+#   zundamon-ctl pref-list    都道府県名の一覧(ボタンの地域選択が使う)
 #   zundamon-ctl test         ちゃんと動くか一言喋る
 #   zundamon-ctl status       状態表示
 #   zundamon-ctl uninstall    常駐を解除(アンインストール)
@@ -17,12 +22,44 @@ ROOT="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
 LA="$HOME/Library/LaunchAgents"
 DOMAIN="gui/$(id -u)"
 
+# 都道府県名 -> 気象庁 府県予報区コード(主要1区。北海道/沖縄は代表区)
+pref_code() {
+  case "$1" in
+    北海道) echo 016000 ;; 青森県) echo 020000 ;; 岩手県) echo 030000 ;;
+    宮城県) echo 040000 ;; 秋田県) echo 050000 ;; 山形県) echo 060000 ;;
+    福島県) echo 070000 ;; 茨城県) echo 080000 ;; 栃木県) echo 090000 ;;
+    群馬県) echo 100000 ;; 埼玉県) echo 110000 ;; 千葉県) echo 120000 ;;
+    東京都) echo 130000 ;; 神奈川県) echo 140000 ;; 新潟県) echo 150000 ;;
+    富山県) echo 160000 ;; 石川県) echo 170000 ;; 福井県) echo 180000 ;;
+    山梨県) echo 190000 ;; 長野県) echo 200000 ;; 岐阜県) echo 210000 ;;
+    静岡県) echo 220000 ;; 愛知県) echo 230000 ;; 三重県) echo 240000 ;;
+    滋賀県) echo 250000 ;; 京都府) echo 260000 ;; 大阪府) echo 270000 ;;
+    兵庫県) echo 280000 ;; 奈良県) echo 290000 ;; 和歌山県) echo 300000 ;;
+    鳥取県) echo 310000 ;; 島根県) echo 320000 ;; 岡山県) echo 330000 ;;
+    広島県) echo 340000 ;; 山口県) echo 350000 ;; 徳島県) echo 360000 ;;
+    香川県) echo 370000 ;; 愛媛県) echo 380000 ;; 高知県) echo 390000 ;;
+    福岡県) echo 400000 ;; 佐賀県) echo 410000 ;; 長崎県) echo 420000 ;;
+    熊本県) echo 430000 ;; 大分県) echo 440000 ;; 宮崎県) echo 450000 ;;
+    鹿児島県) echo 460100 ;; 沖縄県) echo 471000 ;;
+    *) echo "" ;;
+  esac
+}
+
+write_cfg() {  # 1:KEY 2:VALUE  config.env の該当行を置換(無ければ追記)
+  local key="$1" val="$2" cfg="$ROOT/config.env"
+  if grep -q "^$key=" "$cfg" 2>/dev/null; then
+    sed -i '' -e "s#^$key=.*#$key=$val#" "$cfg"
+  else
+    printf '%s=%s\n' "$key" "$val" >> "$cfg"
+  fi
+}
+
 case "$1" in
   start|on)
     touch "$ROOT/enabled"
     mkdir -p "$ROOT/switches"
     # 停止中のエージェントがあれば入れ直す(動作中なら何もしない)
-    for a in engine time system notify startup; do
+    for a in engine time system notify startup weather eew quake jmawarn; do
       launchctl print "$DOMAIN/com.zundamon.$a" >/dev/null 2>&1 \
         || launchctl bootstrap "$DOMAIN" "$LA/com.zundamon.$a.plist" 2>/dev/null || true
     done
@@ -36,16 +73,40 @@ case "$1" in
   notify-off)
     rm -f "$ROOT/switches/notify"
     echo "通知の読み上げをオフにしたのだ" ;;
+  quake-on)
+    mkdir -p "$ROOT/switches"; touch "$ROOT/switches/eew" "$ROOT/switches/quake"
+    echo "地震速報をオンにしたのだ（緊急地震速報と地震情報）" ;;
+  quake-off)
+    rm -f "$ROOT/switches/eew" "$ROOT/switches/quake"
+    echo "地震速報をオフにしたのだ" ;;
+  warn-on)
+    name="$2"; code="$(pref_code "$name")"
+    if [ -z "$code" ]; then
+      echo "地域名が不明なのだ（例: 東京都）。設定しなかったのだ"; exit 1
+    fi
+    write_cfg JMA_AREA "$code"
+    write_cfg JMA_AREA_NAME "$name"
+    mkdir -p "$ROOT/switches"; touch "$ROOT/switches/jmawarn"
+    echo "気象警報をオンにしたのだ（$name）" ;;
+  warn-off)
+    rm -f "$ROOT/switches/jmawarn"
+    echo "気象警報をオフにしたのだ" ;;
+  pref-list)
+    for p in 北海道 青森県 岩手県 宮城県 秋田県 山形県 福島県 茨城県 栃木県 群馬県 \
+             埼玉県 千葉県 東京都 神奈川県 新潟県 富山県 石川県 福井県 山梨県 長野県 \
+             岐阜県 静岡県 愛知県 三重県 滋賀県 京都府 大阪府 兵庫県 奈良県 和歌山県 \
+             鳥取県 島根県 岡山県 広島県 山口県 徳島県 香川県 愛媛県 高知県 福岡県 \
+             佐賀県 長崎県 熊本県 大分県 宮崎県 鹿児島県 沖縄県; do echo "$p"; done ;;
   test)
     /usr/bin/env python3 "$ROOT/core.py" --test ;;
   status)
     /usr/bin/env python3 "$ROOT/core.py" --status
     [ -f "$ROOT/enabled" ] && echo "全体: オン" || echo "全体: オフ"
-    for s in time power notify startup; do
+    for s in time power notify startup weather eew quake jmawarn; do
       [ -f "$ROOT/switches/$s" ] && echo "  $s: オン" || echo "  $s: オフ"
     done ;;
   uninstall)
     "$ROOT/uninstall.sh" ;;
   *)
-    echo "使い方: zundamon-ctl {start|stop|notify-on|notify-off|test|status|uninstall}" ;;
+    echo "使い方: zundamon-ctl {start|stop|notify-on|notify-off|quake-on|quake-off|warn-on 地域|warn-off|test|status|uninstall}" ;;
 esac
